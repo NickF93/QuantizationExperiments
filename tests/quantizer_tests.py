@@ -2,7 +2,7 @@ import unittest
 import torch
 import numpy as np
 import logging
-from src.quantizer import linear_q_with_scale_and_zero_point, linear_dequantizer, get_q_scale_and_zero_point, linear_quantizer
+from src.quantizer import linear_q_with_scale_and_zero_point, linear_dequantizer, get_q_scale_and_zero_point, linear_quantizer, get_q_scale_symmetric, linear_q_symmetric
 from src.helper import plot_quantization_errors
 
 # Configure logging
@@ -98,6 +98,31 @@ class TestQuantizer(unittest.TestCase):
         dequantized_tensor = linear_dequantizer(quantized_tensor, new_scale, new_zero_point)
 
         plot_quantization_errors(r_tensor, quantized_tensor, dequantized_tensor)
+
+        error = (dequantized_tensor-r_tensor).square().mean()
+
+        logger.info('error: %s', error.numpy())
+
+        self.assertTrue(
+            np.allclose(error, 0.0, atol=1e-4)
+        )
+    
+    def test_symmetric_scale(self):
+        logger.warning('test_symmetric_scale')
+
+        r_tensor = torch.randn((4, 4))
+
+        get_q_scale_symmetric(r_tensor)
+
+        scale = get_q_scale_symmetric(r_tensor)
+
+        logger.info('scale: %s', scale)
+
+        quantzed_tensor, scale = linear_q_symmetric(r_tensor)
+
+        dequantized_tensor = linear_dequantizer(quantzed_tensor, scale, 0)
+
+        plot_quantization_errors(r_tensor, quantzed_tensor, dequantized_tensor, dtype=torch.int8)
 
         error = (dequantized_tensor-r_tensor).square().mean()
 
